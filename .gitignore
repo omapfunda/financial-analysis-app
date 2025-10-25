@@ -128,17 +128,15 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Project specific
-logs/
-cache/
-*.html
+# Development and testing files
 *.ipynb
-debug_*.py
 test_*.py
+debug_*.py
+*_test.py
+*.html
 test_*.html
 *_test.html
-*_debug.py
-screener_*.html
+example_*.py
 debug_*.html
 pillars_test.html
 realistic_screener_test.html
@@ -146,14 +144,14 @@ relaxed_*.html
 simple_screener_test.html
 final_screener_test.html
 
-# IDE
+# IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -161,3 +159,16 @@ final_screener_test.html
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Logs
+logs/*.log
+
+# Cache directories
+cache/
+.cache/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/

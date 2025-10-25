@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Analysis Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Hero Section -->
+    <div class="hero-section text-center">
+        <h1 class="display-4 mb-3">Stock Analysis Dashboard</h1>
+        <p class="lead mb-4">Analyze 503 S&P 500 companies with our comprehensive screening and analysis tools</p>
+        <a href="{{ url_for('analysis.screener') }}" class="btn btn-light btn-lg">
+            <i class="fas fa-search"></i> Start Screening
+        </a>
+    </div>
+
+    <!-- Quick Actions Grid -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="h4 mb-4">Quick Actions</h2>
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="action-card h-100 p-4 border rounded-3 text-center">
+                        <div class="action-icon mb-3">
+                            <i class="fas fa-filter fa-2x text-primary"></i>
+                        </div>
+                        <h5 class="mb-2">Stock Screener</h5>
+                        <p class="text-muted mb-3">Filter 503 S&P 500 stocks by custom criteria</p>
+                        <a href="{{ url_for('analysis.screener') }}" class="btn btn-outline-primary">Launch Screener</a>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="action-card h-100 p-4 border rounded-3 text-center">
+                        <div class="action-icon mb-3">
+                            <i class="fas fa-search fa-2x text-info"></i>
+                        </div>
+                        <h5 class="mb-2">Stock Analysis</h5>
+                        <p class="text-muted mb-3">Deep dive analysis with Eight Pillars scoring</p>
+                        <a href="{{ url_for('analysis.analyze') }}" class="btn btn-outline-info">Analyze Stock</a>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="action-card h-100 p-4 border rounded-3 text-center">
+                        <div class="action-icon mb-3">
+                            <i class="fas fa-balance-scale fa-2x text-warning"></i>
+                        </div>
+                        <h5 class="mb-2">Compare Stocks</h5>
+                        <p class="text-muted mb-3">Side-by-side comparison of multiple stocks</p>
+                        <a href="{{ url_for('analysis.compare') }}" class="btn btn-outline-warning">Start Comparison</a>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="action-card h-100 p-4 border rounded-3 text-center">
+                        <div class="action-icon mb-3">
+                            <i class="fas fa-briefcase fa-2x text-success"></i>
+                        </div>
+                        <h5 class="mb-2">Portfolio</h5>
+                        <p class="text-muted mb-3">Manage your investment portfolio</p>
+                        <a href="{{ url_for('portfolio.portfolio') }}" class="btn btn-outline-success">View Portfolio</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Recent Analyses and Market Overview -->
+    <div class="row mb-5">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Analyses</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_analyses %}
+                        {% for analysis in recent_analyses %}
+                        <div class="analysis-item d-flex align-items-center mb-3 p-3 border rounded" style="cursor: pointer;" onclick="window.location.href='/analyze?ticker={{ analysis.ticker }}'">
+                            <div class="me-3">
+                                <strong>{{ analysis.company_name }}</strong><br>
+                                <small class="text-muted">{{ analysis.sector }} • ${{ "%.2f"|format(analysis.price) }}</small>
+                            </div>
+                            <div class="ms-auto">
+                                {% set score = analysis.eight_pillars_score %}
+                                {% if score >= 8.0 %}
+                                    <span class="badge bg-success">{{ "%.1f"|format(score) }}/10</span>
+                                {% elif score >= 7.0 %}
+                                    <span class="badge bg-warning">{{ "%.1f"|format(score) }}/10</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ "%.1f"|format(score) }}/10</span>
+                                {% endif %}
+                                <br>
+                                <small class="text-muted">Eight Pillars Score</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-chart-line fa-3x mb-3"></i>
+                            <p>No recent analyses yet.</p>
+                            <p>Start by analyzing a stock to see your recent analyses here.</p>
+                            <a href="/analyze" class="btn btn-primary">Analyze a Stock</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Market Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="market-stat mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>S&P 500</span>
+                            <span class="text-success">4,756.50</span>
+                        </div>
+                    </div>
+                    <div class="market-stat mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Companies Analyzed</span>
+                            <span>503</span>
+                        </div>
+                    </div>
+                    <div class="market-stat mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Avg P/E Ratio</span>
+                            <span>18.2</span>
+                        </div>
+                    </div>
+                    <div class="market-stat mb-4">
+                        <div class="d-flex justify-content-between">
+                            <span>Avg ROE</span>
+                            <span>19.5%</span>
+                        </div>
+                    </div>
+                    <h6 class="mb-3">Top Sectors</h6>
+                    <div class="sector-item d-flex justify-content-between mb-2">
+                        <span>Technology</span>
+                        <span>28.5%</span>
+                    </div>
+                    <div class="sector-item d-flex justify-content-between mb-2">
+                        <span>Healthcare</span>
+                        <span>13.1%</span>
+                    </div>
+                    <div class="sector-item d-flex justify-content-between">
+                        <span>Financial</span>
+                        <span>11.2%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<style>
+.action-card {
+    transition: all 0.3s ease;
+    background: #fff;
+}
+.action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+.action-icon {
+    opacity: 0.8;
+}
+.analysis-item {
+    transition: all 0.2s ease;
+}
+.analysis-item:hover {
+    background-color: #f8f9fa;
+}
+.market-stat {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.sector-item {
+    padding: 4px 0;
+    font-size: 0.9rem;
+}
+.hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 60px 40px;
+    margin-bottom: 40px;
+}
+.market-overview-placeholder {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    color: #6c757d;
+}
+</style>
+{% endblock %}

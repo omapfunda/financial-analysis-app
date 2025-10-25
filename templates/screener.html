@@ -1,0 +1,798 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Screener{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="screener-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-filter"></i> Stock Screener</h2>
+                        <p class="text-muted mb-0">Filter from 503 S&P 500 companies based on your investment criteria</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preset Strategies -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-magic"></i> Quick Start Presets</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <button type="button" class="btn btn-outline-success w-100 preset-btn" data-preset="conservative">
+                                <i class="fas fa-shield-alt"></i> Conservative
+                                <small class="d-block text-muted">Low P/E, High ROE, Low Debt</small>
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <button type="button" class="btn btn-outline-primary w-100 preset-btn" data-preset="growth">
+                                <i class="fas fa-rocket"></i> Growth
+                                <small class="d-block text-muted">High Revenue Growth, Strong Margins</small>
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <button type="button" class="btn btn-outline-warning w-100 preset-btn" data-preset="value">
+                                <i class="fas fa-gem"></i> Value
+                                <small class="d-block text-muted">Low P/E, Low P/B, High Dividend</small>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12 text-center">
+                            <button type="button" class="btn btn-outline-secondary" id="resetBtn">
+                                <i class="fas fa-undo"></i> Reset All Criteria
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screening Criteria Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h"></i> Screening Criteria</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('analysis.screener') }}" id="screenerForm">
+                        <div class="row">
+                            <!-- Market Cap Criteria -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-dark"><i class="fas fa-building"></i> Market Cap</h6>
+                                <div class="form-group mb-2">
+                                    <label for="market_cap_min" class="form-label">Minimum ($ Millions)</label>
+                                    <input type="number" class="form-control" id="market_cap_min" name="market_cap_min" 
+                                           value="{{ criteria.market_cap_min or 1000 }}" min="0" step="100">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label for="market_cap_max" class="form-label">Maximum ($ Millions)</label>
+                                    <input type="number" class="form-control" id="market_cap_max" name="market_cap_max" 
+                                           value="{{ criteria.market_cap_max or '' }}" min="0" step="100" placeholder="No limit">
+                                </div>
+                            </div>
+
+                            <!-- Valuation Criteria -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-dark"><i class="fas fa-percentage"></i> Valuation Ratios</h6>
+                                <div class="form-group mb-2">
+                                    <label for="pe_ratio_max" class="form-label">Max P/E Ratio</label>
+                                    <input type="number" class="form-control" id="pe_ratio_max" name="pe_ratio_max" 
+                                           value="{{ criteria.pe_ratio_max or 25 }}" min="0" step="0.1">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label for="price_book_max" class="form-label">Max Price/Book</label>
+                                    <input type="number" class="form-control" id="price_book_max" name="price_book_max" 
+                                           value="{{ criteria.price_book_max or '' }}" min="0" step="0.1" placeholder="No limit">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label for="price_sales_max" class="form-label">Max Price/Sales</label>
+                                    <input type="number" class="form-control" id="price_sales_max" name="price_sales_max" 
+                                           value="{{ criteria.price_sales_max or '' }}" min="0" step="0.1" placeholder="No limit">
+                                </div>
+                            </div>
+
+                            <!-- Financial Health Criteria -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-dark"><i class="fas fa-heart"></i> Financial Health</h6>
+                                <div class="form-group mb-2">
+                                    <label for="debt_equity_max" class="form-label">Max Debt/Equity</label>
+                                    <input type="number" class="form-control" id="debt_equity_max" name="debt_equity_max" 
+                                           value="{{ criteria.debt_equity_max or 1.0 }}" min="0" step="0.1">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label for="roe_min" class="form-label">Min ROE (%)</label>
+                                    <input type="number" class="form-control" id="roe_min" name="roe_min" 
+                                           value="{{ criteria.roe_min or '' }}" min="0" step="0.1" placeholder="No minimum">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label for="current_ratio_min" class="form-label">Min Current Ratio</label>
+                                    <input type="number" class="form-control" id="current_ratio_min" name="current_ratio_min" 
+                                           value="{{ criteria.current_ratio_min or '' }}" min="0" step="0.1" placeholder="No minimum">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Growth Criteria -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-dark"><i class="fas fa-chart-line"></i> Growth Metrics</h6>
+                                <div class="form-group mb-2">
+                                    <label for="revenue_growth_min" class="form-label">Min Revenue Growth (%)</label>
+                                    <input type="number" class="form-control" id="revenue_growth_min" name="revenue_growth_min" 
+                                           value="{{ criteria.revenue_growth_min or '' }}" step="0.1" placeholder="No minimum">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label for="earnings_growth_min" class="form-label">Min Earnings Growth (%)</label>
+                                    <input type="number" class="form-control" id="earnings_growth_min" name="earnings_growth_min" 
+                                           value="{{ criteria.earnings_growth_min or '' }}" step="0.1" placeholder="No minimum">
+                                </div>
+                            </div>
+
+                            <!-- Dividend Criteria -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-dark"><i class="fas fa-coins"></i> Dividend Metrics</h6>
+                                <div class="form-group mb-2">
+                                    <label for="dividend_yield_min" class="form-label">Min Dividend Yield (%)</label>
+                                    <input type="number" class="form-control" id="dividend_yield_min" name="dividend_yield_min" 
+                                           value="{{ criteria.dividend_yield_min or '' }}" min="0" step="0.1" placeholder="No minimum">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label for="payout_ratio_max" class="form-label">Max Payout Ratio (%)</label>
+                                    <input type="number" class="form-control" id="payout_ratio_max" name="payout_ratio_max" 
+                                           value="{{ criteria.payout_ratio_max or '' }}" min="0" max="100" step="0.1" placeholder="No maximum">
+                                </div>
+                            </div>
+
+                            <!-- Sector Filter -->
+                            <div class="col-md-4 mb-3">
+                                <h6 class="text-secondary"><i class="fas fa-industry"></i> Sector & Industry</h6>
+                                <div class="form-group mb-2">
+                                    <label for="sector" class="form-label">Sector</label>
+                                    <select class="form-control" id="sector" name="sector">
+                                        <option value="">All Sectors</option>
+                                        <option value="Technology" {{ 'selected' if criteria.sector == 'Technology' }}>Technology</option>
+                                        <option value="Healthcare" {{ 'selected' if criteria.sector == 'Healthcare' }}>Healthcare</option>
+                                        <option value="Financial Services" {{ 'selected' if criteria.sector == 'Financial Services' }}>Financial Services</option>
+                                        <option value="Consumer Cyclical" {{ 'selected' if criteria.sector == 'Consumer Cyclical' }}>Consumer Cyclical</option>
+                                        <option value="Consumer Defensive" {{ 'selected' if criteria.sector == 'Consumer Defensive' }}>Consumer Defensive</option>
+                                        <option value="Industrials" {{ 'selected' if criteria.sector == 'Industrials' }}>Industrials</option>
+                                        <option value="Energy" {{ 'selected' if criteria.sector == 'Energy' }}>Energy</option>
+                                        <option value="Utilities" {{ 'selected' if criteria.sector == 'Utilities' }}>Utilities</option>
+                                        <option value="Real Estate" {{ 'selected' if criteria.sector == 'Real Estate' }}>Real Estate</option>
+                                        <option value="Materials" {{ 'selected' if criteria.sector == 'Materials' }}>Materials</option>
+                                        <option value="Communication Services" {{ 'selected' if criteria.sector == 'Communication Services' }}>Communication Services</option>
+                                    </select>
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label for="min_pillars_score" class="form-label">Min Eight Pillars Score</label>
+                                    <select class="form-control" id="min_pillars_score" name="min_pillars_score">
+                                        <option value="">No minimum</option>
+                                        <option value="4" {{ 'selected' if criteria.min_pillars_score == '4' }}>4/8 (Fair)</option>
+                                        <option value="5" {{ 'selected' if criteria.min_pillars_score == '5' }}>5/8 (Good)</option>
+                                        <option value="6" {{ 'selected' if criteria.min_pillars_score == '6' }}>6/8 (Very Good)</option>
+                                        <option value="7" {{ 'selected' if criteria.min_pillars_score == '7' }}>7/8 (Excellent)</option>
+                                        <option value="8" {{ 'selected' if criteria.min_pillars_score == '8' }}>8/8 (Perfect)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-search"></i> Screen Stocks
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-lg ms-2" onclick="resetForm()">
+                                    <i class="fas fa-undo"></i> Reset
+                                </button>
+                                <button type="button" class="btn btn-info btn-lg ms-2" onclick="applyPreset('conservative')">
+                                    <i class="fas fa-shield-alt"></i> Conservative
+                                </button>
+                                <button type="button" class="btn btn-warning btn-lg ms-2" onclick="applyPreset('growth')">
+                                    <i class="fas fa-rocket"></i> Growth
+                                </button>
+                                <button type="button" class="btn btn-success btn-lg ms-2" onclick="applyPreset('value')">
+                                    <i class="fas fa-gem"></i> Value
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    
+    {% if screening_results %}
+    <!-- Results Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0"><i class="fas fa-check-circle"></i> Screening Complete</h5>
+                            <small>Found <strong>{{ screening_results|length }}</strong> stocks matching your criteria</small>
+                        </div>
+                        <div class="results-actions">
+                            <a href="{{ url_for('analysis.compare') }}?tickers={% for stock in screening_results %}{{ stock['symbol'] }}{% if not loop.last %},{% endif %}{% endfor %}" 
+                               class="btn btn-light btn-sm me-2">
+                                <i class="fas fa-balance-scale"></i> Compare All
+                            </a>
+                            <button class="btn btn-outline-light btn-sm" onclick="exportResults()">
+                                <i class="fas fa-download"></i> Export CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-table"></i> Investment Opportunities</h5>
+                        <div class="table-controls">
+                            <button class="btn btn-sm btn-outline-primary" onclick="selectTopStocks()">
+                                <i class="fas fa-star"></i> Select Top 10
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                                <i class="fas fa-times"></i> Clear Selection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if results_html %}
+                        {{ results_html|safe }}
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="resultsTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAll" class="form-check-input">
+                                        </th>
+                                        <th>Symbol</th>
+                                        <th>Company Name</th>
+                                        <th>Sector</th>
+                                        <th>Market Cap</th>
+                                        <th>P/E Ratio</th>
+                                        <th>Price/Book</th>
+                                        <th>ROE (%)</th>
+                                        <th>Debt/Equity</th>
+                                        <th>Pillars Score</th>
+                                        <th width="200">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stock in screening_results %}
+                                    <tr class="stock-row" data-symbol="{{ stock['symbol'] }}">
+                                        <td>
+                                            <input type="checkbox" class="form-check-input stock-checkbox" value="{{ stock['symbol'] }}">
+                                        </td>
+                                        <td>
+                                            <strong class="text-primary">{{ stock['symbol'] }}</strong>
+                                        </td>
+                                        <td>
+                                            <div class="company-info">
+                                                <div class="company-name">{{ stock['company_name'] }}</div>
+                                                <small class="text-muted">{{ stock['sector'] }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark">{{ stock['sector'] }}</span>
+                                        </td>
+                                        <td>
+                            {% if stock['market_cap_display'] %}
+                                {{ stock['market_cap_display'] }}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                                        <td>
+                                            {% if stock['pe_ratio'] %}
+                                                <span class="{% if stock['pe_ratio'] < 15 %}text-success{% elif stock['pe_ratio'] < 25 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ "%.1f"|format(stock['pe_ratio']) }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if stock['price_book'] %}
+                                                <span class="{% if stock['price_book'] < 1.5 %}text-success{% elif stock['price_book'] < 3 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ "%.1f"|format(stock['price_book']) }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if stock['roe'] %}
+                                                <span class="{% if stock['roe'] > 15 %}text-success{% elif stock['roe'] > 10 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ "%.1f"|format(stock['roe']) }}%
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if stock['debt_equity'] %}
+                                                <span class="{% if stock['debt_equity'] < 0.3 %}text-success{% elif stock['debt_equity'] < 0.6 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ "%.2f"|format(stock['debt_equity']) }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="pillars-score">
+                                                <span class="badge {% if stock['pillars_score'] >= 6 %}bg-success{% elif stock['pillars_score'] >= 4 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
+                                                    {{ stock['pillars_score'] }}/8
+                                                </span>
+                                                <div class="pillars-bar mt-1">
+                                                    <div class="progress" style="height: 4px;">
+                                                        <div class="progress-bar {% if stock['pillars_score'] >= 6 %}bg-success{% elif stock['pillars_score'] >= 4 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                             style="width: {{ (stock['pillars_score']/8)*100 }}%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ url_for('analysis.analyze') }}?ticker={{ stock['symbol'] }}" 
+                                                   class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Deep Analysis">
+                                                    <i class="fas fa-chart-line"></i>
+                                                </a>
+                                                <button class="btn btn-info btn-sm compare-btn" data-symbol="{{ stock['symbol'] }}" 
+                                                        data-bs-toggle="tooltip" title="Add to Comparison">
+                                                    <i class="fas fa-balance-scale"></i>
+                                                </button>
+                                                <button class="btn btn-success btn-sm portfolio-btn" data-symbol="{{ stock['symbol'] }}" 
+                                                        data-bs-toggle="tooltip" title="Add to Portfolio">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Bulk Actions Footer -->
+                <div class="card-footer bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="selected-info">
+                            <span id="selectedCount">0</span> stocks selected
+                        </div>
+                        <div class="bulk-actions">
+                            <button class="btn btn-primary" id="bulkAnalyze" disabled>
+                                <i class="fas fa-chart-line"></i> Analyze Selected
+                            </button>
+                            <button class="btn btn-info ms-2" id="bulkCompare" disabled>
+                                <i class="fas fa-balance-scale"></i> Compare Selected
+                            </button>
+                            <button class="btn btn-success ms-2" id="bulkPortfolio" disabled>
+                                <i class="fas fa-briefcase"></i> Add to Portfolio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Screening Tips -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Screening Tips</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6 class="text-dark">Conservative Strategy</h6>
+                            <ul class="small">
+                                <li>Low P/E ratio (&lt; 15)</li>
+                                <li>Low debt/equity (&lt; 0.5)</li>
+                                <li>High current ratio (&gt; 2)</li>
+                                <li>Consistent dividend payments</li>
+                                <li>High Eight Pillars score (&gt; 6)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-dark">Growth Strategy</h6>
+                            <ul class="small">
+                                <li>High revenue growth (&gt; 15%)</li>
+                                <li>High earnings growth (&gt; 20%)</li>
+                                <li>High ROE (&gt; 15%)</li>
+                                <li>Technology/Healthcare sectors</li>
+                                <li>Moderate P/E ratio (&lt; 30)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-dark">Value Strategy</h6>
+                            <ul class="small">
+                                <li>Low P/E ratio (&lt; 12)</li>
+                                <li>Low Price/Book (&lt; 1.5)</li>
+                                <li>High dividend yield (&gt; 3%)</li>
+                                <li>Large market cap (&gt; $10B)</li>
+                                <li>Stable earnings history</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enhanced Screener JavaScript Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Preset button handlers
+    document.querySelectorAll('.preset-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const preset = this.dataset.preset;
+            loadPreset(preset);
+        });
+    });
+
+    // Reset button handler
+    document.getElementById('resetBtn').addEventListener('click', resetForm);
+
+    // Checkbox selection handlers
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const stockCheckboxes = document.querySelectorAll('.stock-checkbox');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const bulkButtons = document.querySelectorAll('[id^="bulk"]');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            stockCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSelectedCount();
+        });
+    }
+
+    stockCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    // Bulk action handlers
+    document.getElementById('bulkAnalyze')?.addEventListener('click', function() {
+        const selected = getSelectedStocks();
+        if (selected.length > 0) {
+            // Open multiple analysis tabs
+            selected.forEach(symbol => {
+                window.open(`{{ url_for('analysis.analyze') }}?ticker=${symbol}`, '_blank');
+            });
+        }
+    });
+
+    document.getElementById('bulkCompare')?.addEventListener('click', function() {
+        const selected = getSelectedStocks();
+        if (selected.length > 1) {
+            window.open(`{{ url_for('analysis.compare') }}?tickers=${selected.join(',')}`, '_blank');
+        } else {
+            alert('Please select at least 2 stocks to compare.');
+        }
+    });
+
+    document.getElementById('bulkPortfolio')?.addEventListener('click', function() {
+        const selected = getSelectedStocks();
+        if (selected.length > 0) {
+            // Add to portfolio functionality
+            addToPortfolio(selected);
+        }
+    });
+
+    // Individual action handlers
+    document.querySelectorAll('.compare-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const symbol = this.dataset.symbol;
+            addToComparison(symbol);
+        });
+    });
+
+    document.querySelectorAll('.portfolio-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const symbol = this.dataset.symbol;
+            addToPortfolio([symbol]);
+        });
+    });
+
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.stock-checkbox:checked');
+        const count = selected.length;
+        
+        if (selectedCountSpan) {
+            selectedCountSpan.textContent = count;
+        }
+        
+        // Enable/disable bulk action buttons
+        bulkButtons.forEach(button => {
+            button.disabled = count === 0;
+        });
+
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            if (count === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (count === stockCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+    }
+
+    function getSelectedStocks() {
+        return Array.from(document.querySelectorAll('.stock-checkbox:checked'))
+                   .map(checkbox => checkbox.value);
+    }
+});
+
+// Preset loading functions
+function resetForm() {
+    document.querySelector('#screenerForm').reset();
+}
+
+function loadPreset(strategy) {
+    resetForm();
+    
+    if (strategy === 'conservative') {
+        setFieldValue('market_cap_min', 5);
+        setFieldValue('pe_ratio_max', 15);
+        setFieldValue('debt_equity_max', 0.5);
+        setFieldValue('current_ratio_min', 2);
+        setFieldValue('dividend_yield_min', 2);
+        setFieldValue('min_pillars_score', 6);
+    } else if (strategy === 'growth') {
+        setFieldValue('market_cap_min', 1);
+        setFieldValue('pe_ratio_max', 30);
+        setFieldValue('revenue_growth_min', 15);
+        setFieldValue('earnings_growth_min', 20);
+        setFieldValue('roe_min', 15);
+    } else if (strategy === 'value') {
+        setFieldValue('market_cap_min', 10);
+        setFieldValue('pe_ratio_max', 12);
+        setFieldValue('price_book_max', 1.5);
+        setFieldValue('dividend_yield_min', 3);
+        setFieldValue('debt_equity_max', 0.8);
+     }
+}
+
+// Helper functions
+function setFieldValue(fieldId, value) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.value = value;
+    }
+}
+
+function addToComparison(symbol) {
+    // Store in session storage for comparison
+    let comparison = JSON.parse(sessionStorage.getItem('comparison') || '[]');
+    if (!comparison.includes(symbol)) {
+        comparison.push(symbol);
+        sessionStorage.setItem('comparison', JSON.stringify(comparison));
+        
+        // Show feedback
+        showToast(`${symbol} added to comparison (${comparison.length} stocks)`);
+        
+        // Update comparison button if it exists
+        updateComparisonButton();
+    } else {
+        showToast(`${symbol} is already in comparison`);
+    }
+}
+
+function addToPortfolio(symbols) {
+    // This would typically make an API call to add stocks to portfolio
+    // For now, we'll show a confirmation
+    const symbolList = Array.isArray(symbols) ? symbols.join(', ') : symbols;
+    if (confirm(`Add ${symbolList} to portfolio?`)) {
+        // Make API call here
+        fetch('/api/portfolio/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ symbols: Array.isArray(symbols) ? symbols : [symbols] })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Successfully added ${symbolList} to portfolio`);
+            } else {
+                showToast(`Error adding to portfolio: ${data.message}`, 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Error adding to portfolio', 'error');
+        });
+    }
+}
+
+function updateComparisonButton() {
+    const comparison = JSON.parse(sessionStorage.getItem('comparison') || '[]');
+    const compareAllBtn = document.getElementById('compareAllBtn');
+    if (compareAllBtn && comparison.length > 0) {
+        compareAllBtn.textContent = `Compare Selected (${comparison.length})`;
+        compareAllBtn.disabled = comparison.length < 2;
+    }
+}
+
+function showToast(message, type = 'success') {
+    // Create a simple toast notification
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 3000);
+}
+
+// Initialize comparison on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateComparisonButton();
+});
+
+function exportResults() {
+    const table = document.querySelector('.table');
+    if (!table) {
+        alert('No results to export');
+        return;
+    }
+    
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    
+    rows.forEach(function(row) {
+        const cols = row.querySelectorAll('td, th');
+        const csvRow = [];
+        cols.forEach(function(col, index) {
+            // Skip the Actions column (last column)
+            if (index < cols.length - 1) {
+                // Clean up the text content and escape quotes
+                let cellText = col.textContent.trim().replace(/"/g, '""');
+                csvRow.push('"' + cellText + '"');
+            }
+        });
+        if (csvRow.length > 0) {
+            csv.push(csvRow.join(','));
+        }
+    });
+    
+    // Create and download the CSV file
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'screener_results_' + new Date().toISOString().slice(0,10) + '.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else {
+        alert('CSV export is not supported in this browser');
+    }
+}
+
+// Add sorting functionality to results table
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.table');
+    if (table) {
+        // Add sorting icons to headers
+        const headers = table.querySelectorAll('th');
+        headers.forEach((header, index) => {
+            if (index < headers.length - 1) { // Skip the Actions column
+                header.style.cursor = 'pointer';
+                header.innerHTML += ' <i class="fas fa-sort text-muted"></i>';
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.badge-success {
+    background-color: #28a745;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+}
+
+.table th {
+    background-color: #343a40;
+    color: white;
+    font-weight: 600;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.btn-lg {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.card-header h6 {
+    margin-bottom: 0.5rem;
+}
+
+.small {
+    font-size: 0.875rem;
+}
+
+.small li {
+    margin-bottom: 0.25rem;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}

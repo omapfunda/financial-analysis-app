@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Comparison{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-balance-scale"></i> Multi-Stock Comparison</h2>
+            <p class="text-muted">Compare multiple stocks side-by-side with key financial metrics and performance indicators</p>
+        </div>
+    </div>
+
+    <!-- Stock Input Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-plus"></i> Select Stocks to Compare</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('analysis.compare') }}">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group mb-3">
+                                    <label for="tickers" class="form-label">Stock Ticker Symbols</label>
+                                    <input type="text" class="form-control" id="tickers" name="tickers" 
+                                           placeholder="e.g., AAPL,MSFT,GOOGL,AMZN" value="{{ tickers_input or '' }}" required>
+                                    <small class="form-text text-muted">Enter multiple ticker symbols separated by commas (maximum 10 stocks)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label for="discount_rate" class="form-label">Discount Rate (%)</label>
+                                    <input type="number" class="form-control" id="discount_rate" name="discount_rate" 
+                                           step="0.01" min="0" max="1" value="{{ discount_rate or 0.125 }}">
+                                    <small class="form-text text-muted">For intrinsic value calculation</small>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-chart-line"></i> Compare Stocks
+                        </button>
+                        <button type="button" class="btn btn-secondary ms-2" onclick="loadSampleStocks()">
+                            <i class="fas fa-magic"></i> Load Sample
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if tickers %}
+    <!-- Comparison Results -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> 
+                Comparing <strong>{{ tickers|length }}</strong> stocks: {{ tickers|join(', ') }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Price History Comparison -->
+    {% if price_chart_html %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Price History Comparison</h5>
+                </div>
+                <div class="card-body">
+                    {{ price_chart_html|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Eight Pillars Comparison -->
+    {% if eight_pillars_comparison %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-columns"></i> Eight Pillars Quality Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Quality assessment comparison across all selected stocks. Green checkmarks (✔️) indicate the stock meets the criterion.
+                    </p>
+                    
+                    <!-- Eight Pillars Marks Table -->
+                    {% if eight_pillars_comparison.marks_html %}
+                    <h6>Quality Marks</h6>
+                    {{ eight_pillars_comparison.marks_html|safe }}
+                    {% endif %}
+                    
+                    <!-- Eight Pillars Values Table -->
+                    {% if eight_pillars_comparison.values_html %}
+                    <h6 class="mt-4">Actual Values</h6>
+                    {{ eight_pillars_comparison.values_html|safe }}
+                    {% endif %}
+                    
+                    <!-- Summary Scores -->
+                    {% if eight_pillars_comparison.scores %}
+                    <div class="mt-4">
+                        <h6>Quality Scores Summary</h6>
+                        <div class="row">
+                            {% for ticker, score in eight_pillars_comparison.scores.items() %}
+                            <div class="col-md-3 mb-2">
+                                <div class="card text-center">
+                                    <div class="card-body py-2">
+                                        <h6 class="card-title mb-1">{{ ticker }}</h6>
+                                        <span class="badge {% if score >= 6 %}badge-success{% elif score >= 4 %}badge-warning{% else %}badge-danger{% endif %} fs-6">
+                                            {{ score }}/8
+                                        </span>
+                                        <div class="progress mt-1" style="height: 8px;">
+                                            <div class="progress-bar {% if score >= 6 %}bg-success{% elif score >= 4 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ (score/8)*100 }}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Intrinsic Value Comparison -->
+    {% if intrinsic_value_html %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-calculator"></i> Intrinsic Value Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Intrinsic value analysis for all selected stocks based on DCF model with EPS estimates and growth projections.
+                    </p>
+                    {{ intrinsic_value_html|safe }}
+                    
+                    {% if valuation_summary %}
+                    <div class="mt-4">
+                        <h6>Valuation Summary</h6>
+                        <div class="row">
+                            {% for item in valuation_summary %}
+                            <div class="col-md-4 mb-2">
+                                <div class="alert {{ item.class }} mb-2">
+                                    <strong>{{ item.ticker }}:</strong> {{ item.message }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Key Metrics Comparison -->
+    {% if key_metrics_html %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Key Metrics Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Side-by-side comparison of important financial ratios and metrics.
+                    </p>
+                    {{ key_metrics_html|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Performance Summary -->
+    {% if performance_summary %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-trophy"></i> Performance Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6 class="text-success"><i class="fas fa-crown"></i> Best Quality Score</h6>
+                            <p class="mb-1"><strong>{{ performance_summary.best_quality.ticker }}</strong></p>
+                            <small class="text-muted">{{ performance_summary.best_quality.score }}/8 pillars</small>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-primary"><i class="fas fa-dollar-sign"></i> Most Undervalued</h6>
+                            <p class="mb-1"><strong>{{ performance_summary.most_undervalued.ticker }}</strong></p>
+                            <small class="text-muted">{{ performance_summary.most_undervalued.discount }}% discount</small>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-warning"><i class="fas fa-chart-line"></i> Highest Growth</h6>
+                            <p class="mb-1"><strong>{{ performance_summary.highest_growth.ticker }}</strong></p>
+                            <small class="text-muted">{{ performance_summary.highest_growth.growth }}% growth estimate</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<script>
+function loadSampleStocks() {
+    document.getElementById('tickers').value = 'AAPL,MSFT,GOOGL,AMZN';
+}
+
+// Add sorting functionality to tables
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Bootstrap table classes for better styling
+    const tables = document.querySelectorAll('table');
+    tables.forEach(table => {
+        table.classList.add('table', 'table-striped', 'table-hover');
+        
+        // Make tables responsive
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('table-responsive');
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+    });
+});
+</script>
+
+<style>
+.badge-success {
+    background-color: #28a745;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+}
+
+.progress {
+    height: 8px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.table-responsive {
+    border-radius: 0.375rem;
+}
+
+.fs-6 {
+    font-size: 1rem !important;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Portfolio Optimization - {{ portfolio.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Portfolio Optimization</h1>
+                    <p class="text-muted">{{ portfolio.name }} - Modern Portfolio Theory Analysis</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('portfolio.view_portfolio', portfolio_id=portfolio.id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Portfolio
+            </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Efficiency Score -->
+    {% if efficiency_analysis and efficiency_analysis.efficiency_score %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="card-title mb-1">Portfolio Efficiency Score</h5>
+                            <p class="text-muted mb-0">How well your portfolio is optimized (compared to maximum Sharpe ratio)</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="efficiency-score">
+                                <span class="score-value text-{{ 'success' if efficiency_analysis.efficiency_score >= 80 else 'warning' if efficiency_analysis.efficiency_score >= 60 else 'danger' }}">
+                                    {{ "%.1f"|format(efficiency_analysis.efficiency_score) }}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% if efficiency_analysis.recommendations %}
+                    <div class="mt-3">
+                        <h6>Recommendations:</h6>
+                        <ul class="mb-0">
+                            {% for recommendation in efficiency_analysis.recommendations %}
+                            <li>{{ recommendation }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Optimization Strategies -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Optimization Strategies</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Strategy</th>
+                                    <th>Expected Return</th>
+                                    <th>Volatility</th>
+                                    <th>Sharpe Ratio</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if efficiency_analysis and efficiency_analysis.current_portfolio %}
+                                <tr class="table-info">
+                                    <td><strong>Current Portfolio</strong></td>
+                                    <td>{{ "%.2f"|format(efficiency_analysis.current_portfolio.expected_return * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(efficiency_analysis.current_portfolio.volatility * 100) }}%</td>
+                                    <td>{{ "%.2f"|format(efficiency_analysis.current_portfolio.sharpe_ratio) }}</td>
+                                    <td>-</td>
+                                </tr>
+                                {% endif %}
+                                
+                                {% for strategy_name, strategy_data in optimization_results.items() %}
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            {% if strategy_name == 'max_sharpe' %}
+                                                Maximum Sharpe Ratio
+                                            {% elif strategy_name == 'min_volatility' %}
+                                                Minimum Volatility
+                                            {% elif strategy_name == 'efficient_return' %}
+                                                Efficient Return (12%)
+                                            {% elif strategy_name == 'equal_weights' %}
+                                                Equal Weights
+                                            {% else %}
+                                                {{ strategy_name|title }}
+                                            {% endif %}
+                                        </strong>
+                                    </td>
+                                    <td class="text-{{ 'success' if strategy_data.expected_return > 0 else 'danger' }}">
+                                        {{ "%.2f"|format(strategy_data.expected_return * 100) }}%
+                                    </td>
+                                    <td>{{ "%.2f"|format(strategy_data.volatility * 100) }}%</td>
+                                    <td class="text-{{ 'success' if strategy_data.sharpe_ratio > 1 else 'warning' if strategy_data.sharpe_ratio > 0 else 'danger' }}">
+                                        {{ "%.2f"|format(strategy_data.sharpe_ratio) }}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showWeights('{{ strategy_name }}')">
+                                            View Weights
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rebalancing Recommendations -->
+    {% if rebalancing and rebalancing.rebalancing_actions %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Rebalancing Recommendations (Max Sharpe Strategy)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Stock</th>
+                                    <th>Current Weight</th>
+                                    <th>Optimal Weight</th>
+                                    <th>Difference</th>
+                                    <th>Action</th>
+                                    <th>Value Change</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for action in rebalancing.rebalancing_actions %}
+                                <tr>
+                                    <td><strong>{{ action.ticker }}</strong></td>
+                                    <td>{{ "%.1f"|format(action.current_weight * 100) }}%</td>
+                                    <td>{{ "%.1f"|format(action.optimal_weight * 100) }}%</td>
+                                    <td class="text-{{ 'success' if action.weight_difference > 0 else 'danger' }}">
+                                        {{ "%.1f"|format(action.weight_difference * 100) }}%
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if action.action == 'buy' else 'danger' }}">
+                                            {{ action.action|upper }}
+                                        </span>
+                                    </td>
+                                    <td class="text-{{ 'success' if action.value_difference > 0 else 'danger' }}">
+                                        ${{ "%.2f"|format(action.value_difference|abs) }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Weight Allocation Charts -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Current Allocation</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="currentAllocationChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Optimal Allocation (Max Sharpe)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="optimalAllocationChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Weight Details Modal -->
+<div class="modal fade" id="weightsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="weightsModalTitle">Portfolio Weights</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="weightsContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store optimization data
+const optimizationData = {{ optimization_results | tojson }};
+const efficiencyData = {{ efficiency_analysis | tojson }};
+
+// Current allocation chart
+const currentCtx = document.getElementById('currentAllocationChart').getContext('2d');
+let currentData = [];
+let currentLabels = [];
+
+if (efficiencyData && efficiencyData.current_portfolio && efficiencyData.current_portfolio.weights) {
+    const weights = efficiencyData.current_portfolio.weights;
+    currentLabels = Object.keys(weights);
+    currentData = Object.values(weights).map(w => w * 100);
+}
+
+const currentChart = new Chart(currentCtx, {
+    type: 'doughnut',
+    data: {
+        labels: currentLabels,
+        datasets: [{
+            data: currentData,
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': ' + context.parsed.toFixed(1) + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Optimal allocation chart
+const optimalCtx = document.getElementById('optimalAllocationChart').getContext('2d');
+let optimalData = [];
+let optimalLabels = [];
+
+if (optimizationData && optimizationData.max_sharpe && optimizationData.max_sharpe.weights) {
+    const weights = optimizationData.max_sharpe.weights;
+    optimalLabels = Object.keys(weights);
+    optimalData = Object.values(weights).map(w => w * 100);
+}
+
+const optimalChart = new Chart(optimalCtx, {
+    type: 'doughnut',
+    data: {
+        labels: optimalLabels,
+        datasets: [{
+            data: optimalData,
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': ' + context.parsed.toFixed(1) + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Show weights function
+function showWeights(strategy) {
+    const strategyData = optimizationData[strategy];
+    if (!strategyData || !strategyData.weights) return;
+    
+    const strategyNames = {
+        'max_sharpe': 'Maximum Sharpe Ratio',
+        'min_volatility': 'Minimum Volatility',
+        'efficient_return': 'Efficient Return (12%)',
+        'equal_weights': 'Equal Weights'
+    };
+    
+    document.getElementById('weightsModalTitle').textContent = strategyNames[strategy] || strategy;
+    
+    let content = '<table class="table table-sm"><thead><tr><th>Stock</th><th>Weight</th></tr></thead><tbody>';
+    
+    for (const [ticker, weight] of Object.entries(strategyData.weights)) {
+        if (weight > 0.001) { // Only show weights > 0.1%
+            content += `<tr><td>${ticker}</td><td>${(weight * 100).toFixed(1)}%</td></tr>`;
+        }
+    }
+    
+    content += '</tbody></table>';
+    content += `<div class="mt-3">
+        <small class="text-muted">
+            Expected Return: ${(strategyData.expected_return * 100).toFixed(2)}% | 
+            Volatility: ${(strategyData.volatility * 100).toFixed(2)}% | 
+            Sharpe Ratio: ${strategyData.sharpe_ratio.toFixed(2)}
+        </small>
+    </div>`;
+    
+    document.getElementById('weightsContent').innerHTML = content;
+    
+    const modal = new bootstrap.Modal(document.getElementById('weightsModal'));
+    modal.show();
+}
+</script>
+
+<style>
+.efficiency-score .score-value {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.table th {
+    border-top: none;
+}
+
+.metric-card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+{% endblock %}

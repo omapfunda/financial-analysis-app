@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Create Portfolio{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('portfolio.portfolio') }}">Portfolio</a></li>
+                        <li class="breadcrumb-item active">Create Portfolio</li>
+                    </ol>
+                </nav>
+                <h1><i class="fas fa-plus-circle"></i> Create New Portfolio</h1>
+                <p class="text-muted">Set up a new virtual portfolio to track your investments</p>
+            </div>
+
+            <!-- Create Portfolio Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cog"></i> Portfolio Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="createPortfolioForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Portfolio Name *</label>
+                                    <input type="text" class="form-control" id="name" name="name" required 
+                                           placeholder="e.g., Growth Portfolio, Dividend Stocks">
+                                    <div class="form-text">Choose a descriptive name for your portfolio</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="initial_cash" class="form-label">Initial Cash *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="initial_cash" name="initial_cash" 
+                                               step="0.01" min="0" value="10000" required>
+                                    </div>
+                                    <div class="form-text">Starting cash amount for your portfolio</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Optional description of your investment strategy or goals"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="risk_tolerance" class="form-label">Risk Tolerance</label>
+                                    <select class="form-select" id="risk_tolerance" name="risk_tolerance">
+                                        <option value="conservative">Conservative</option>
+                                        <option value="moderate" selected>Moderate</option>
+                                        <option value="aggressive">Aggressive</option>
+                                    </select>
+                                    <div class="form-text">This helps with portfolio optimization recommendations</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="investment_horizon" class="form-label">Investment Horizon</label>
+                                    <select class="form-select" id="investment_horizon" name="investment_horizon">
+                                        <option value="short">Short-term (< 2 years)</option>
+                                        <option value="medium" selected>Medium-term (2-10 years)</option>
+                                        <option value="long">Long-term (> 10 years)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Portfolio Strategy Section -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6><i class="fas fa-lightbulb"></i> Portfolio Strategy (Optional)</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="dividend_focus" name="dividend_focus">
+                                            <label class="form-check-label" for="dividend_focus">
+                                                Dividend Focus
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="growth_focus" name="growth_focus">
+                                            <label class="form-check-label" for="growth_focus">
+                                                Growth Focus
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="value_focus" name="value_focus">
+                                            <label class="form-check-label" for="value_focus">
+                                                Value Focus
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('portfolio.portfolio') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Create Portfolio
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Start Tips -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6><i class="fas fa-info-circle"></i> Quick Start Tips</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="tip-item">
+                                <div class="tip-icon">
+                                    <i class="fas fa-chart-line text-primary"></i>
+                                </div>
+                                <div class="tip-content">
+                                    <h6>Start Simple</h6>
+                                    <p>Begin with a few well-researched stocks and gradually diversify your portfolio.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="tip-item">
+                                <div class="tip-icon">
+                                    <i class="fas fa-balance-scale text-success"></i>
+                                </div>
+                                <div class="tip-content">
+                                    <h6>Diversify</h6>
+                                    <p>Spread your investments across different sectors and asset classes to reduce risk.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="tip-item">
+                                <div class="tip-icon">
+                                    <i class="fas fa-clock text-warning"></i>
+                                </div>
+                                <div class="tip-content">
+                                    <h6>Stay Patient</h6>
+                                    <p>Long-term investing typically yields better results than frequent trading.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.tip-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.tip-icon {
+    margin-right: 1rem;
+    font-size: 1.5rem;
+    margin-top: 0.25rem;
+}
+
+.tip-content h6 {
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.tip-content p {
+    margin-bottom: 0;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.card {
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.form-label {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+</style>
+
+<script>
+document.getElementById('createPortfolioForm').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const initialCash = parseFloat(document.getElementById('initial_cash').value);
+    
+    if (!name) {
+        e.preventDefault();
+        alert('Please enter a portfolio name.');
+        return;
+    }
+    
+    if (isNaN(initialCash) || initialCash < 0) {
+        e.preventDefault();
+        alert('Please enter a valid initial cash amount.');
+        return;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Portfolio Analytics - {{ portfolio.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Portfolio Analytics</h1>
+                    <p class="text-muted">{{ portfolio.name }} - Advanced Performance Metrics</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('portfolio.view_portfolio', portfolio_id=portfolio.id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Portfolio
+            </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-muted">Total Return</h5>
+                    <h3 class="text-{{ 'success' if performance.total_return >= 0 else 'danger' }}">
+                        {{ "%.2f"|format(performance.total_return) }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-muted">Annualized Return</h5>
+                    <h3 class="text-{{ 'success' if performance.annualized_return >= 0 else 'danger' }}">
+                        {{ "%.2f"|format(performance.annualized_return) }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-muted">Volatility</h5>
+                    <h3 class="text-warning">
+                        {{ "%.2f"|format(performance.volatility) }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-muted">Sharpe Ratio</h5>
+                    <h3 class="text-{{ 'success' if performance.sharpe_ratio > 1 else 'warning' if performance.sharpe_ratio > 0 else 'danger' }}">
+                        {{ "%.2f"|format(performance.sharpe_ratio) }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-muted">Max Drawdown</h5>
+                    <h3 class="text-danger">
+                        {{ "%.2f"|format(risk_metrics.max_drawdown) }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-muted">Beta (vs S&P 500)</h5>
+                    <h3 class="text-{{ 'info' if risk_metrics.beta < 1 else 'warning' }}">
+                        {{ "%.2f"|format(risk_metrics.beta) }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title text-muted">Value at Risk (95%)</h5>
+                    <h3 class="text-danger">
+                        {{ "%.2f"|format(risk_metrics.var_95) }}%
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Sector Allocation Chart -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Sector Allocation</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="sectorChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Portfolio Performance</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="performanceChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Metrics -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Performance Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Total Return</td>
+                                <td class="text-end text-{{ 'success' if performance.total_return >= 0 else 'danger' }}">
+                                    {{ "%.2f"|format(performance.total_return) }}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Annualized Return</td>
+                                <td class="text-end text-{{ 'success' if performance.annualized_return >= 0 else 'danger' }}">
+                                    {{ "%.2f"|format(performance.annualized_return) }}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Volatility (Annual)</td>
+                                <td class="text-end">{{ "%.2f"|format(performance.volatility) }}%</td>
+                            </tr>
+                            <tr>
+                                <td>Sharpe Ratio</td>
+                                <td class="text-end">{{ "%.2f"|format(performance.sharpe_ratio) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Alpha</td>
+                                <td class="text-end text-{{ 'success' if performance.alpha > 0 else 'danger' }}">
+                                    {{ "%.2f"|format(performance.alpha) }}%
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Risk Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Maximum Drawdown</td>
+                                <td class="text-end text-danger">{{ "%.2f"|format(risk_metrics.max_drawdown) }}%</td>
+                            </tr>
+                            <tr>
+                                <td>Beta (vs S&P 500)</td>
+                                <td class="text-end">{{ "%.2f"|format(risk_metrics.beta) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Value at Risk (95%)</td>
+                                <td class="text-end text-danger">{{ "%.2f"|format(risk_metrics.var_95) }}%</td>
+                            </tr>
+                            <tr>
+                                <td>Value at Risk (99%)</td>
+                                <td class="text-end text-danger">{{ "%.2f"|format(risk_metrics.var_99) }}%</td>
+                            </tr>
+                            <tr>
+                                <td>Tracking Error</td>
+                                <td class="text-end">{{ "%.2f"|format(risk_metrics.tracking_error) }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Sector Allocation Chart
+const sectorCtx = document.getElementById('sectorChart').getContext('2d');
+const sectorData = {{ sector_allocation | tojson }};
+
+const sectorChart = new Chart(sectorCtx, {
+    type: 'doughnut',
+    data: {
+        labels: sectorData.map(item => item.sector),
+        datasets: [{
+            data: sectorData.map(item => item.percentage),
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': ' + context.parsed.toFixed(1) + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Performance Chart (placeholder - would need historical data)
+const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+
+// Generate sample performance data for demonstration
+const performanceLabels = [];
+const performanceData = [];
+const today = new Date();
+
+for (let i = 30; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    performanceLabels.push(date.toLocaleDateString());
+    
+    // Sample data - in real implementation, this would come from historical portfolio values
+    const baseValue = 100;
+    const volatility = 0.02;
+    const trend = 0.001;
+    const randomChange = (Math.random() - 0.5) * volatility;
+    const value = baseValue + (i * trend * 100) + (randomChange * 100);
+    performanceData.push(value);
+}
+
+const performanceChart = new Chart(performanceCtx, {
+    type: 'line',
+    data: {
+        labels: performanceLabels,
+        datasets: [{
+            label: 'Portfolio Value',
+            data: performanceData,
+            borderColor: '#36A2EB',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: false,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toFixed(0);
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Value: $' + context.parsed.y.toFixed(2);
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

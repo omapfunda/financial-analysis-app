@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Error {{ error_code }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="text-center">
+                <!-- Error Icon -->
+                <div class="mb-4">
+                    <i class="fas fa-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                </div>
+                
+                <!-- Error Code -->
+                <h1 class="display-1 fw-bold text-muted">{{ error_code }}</h1>
+                
+                <!-- Error Message -->
+                <h2 class="mb-4">{{ error_message }}</h2>
+                
+                <!-- Description based on error code -->
+                {% if error_code == 404 %}
+                <p class="lead text-muted mb-4">
+                    The page you're looking for doesn't exist or has been moved.
+                </p>
+                {% elif error_code == 500 %}
+                <p class="lead text-muted mb-4">
+                    Something went wrong on our end. We're working to fix it.
+                </p>
+                {% else %}
+                <p class="lead text-muted mb-4">
+                    An unexpected error occurred. Please try again later.
+                </p>
+                {% endif %}
+                
+                <!-- Action Buttons -->
+                <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i>Go to Dashboard
+                    </a>
+                    <button onclick="history.back()" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Go Back
+                    </button>
+                </div>
+                
+                <!-- Additional Help -->
+                <div class="mt-5">
+                    <p class="text-muted small">
+                        If this problem persists, please contact support or try refreshing the page.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.display-1 {
+    font-size: 6rem;
+    line-height: 1;
+}
+
+@media (max-width: 576px) {
+    .display-1 {
+        font-size: 4rem;
+    }
+}
+</style>
+{% endblock %}

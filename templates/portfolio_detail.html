@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}{{ portfolio.name }} - Portfolio{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('portfolio.portfolio') }}">Portfolio</a></li>
+                    <li class="breadcrumb-item active">{{ portfolio.name }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="fas fa-briefcase"></i> {{ portfolio.name }}</h1>
+                    <p class="text-muted">{{ portfolio.description or 'Portfolio performance and holdings' }}</p>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStockModal">
+                        <i class="fas fa-plus"></i> Add Stock
+                    </button>
+                    <a href="{{ url_for('portfolio.portfolio_analytics', portfolio_id=portfolio.portfolio_id) }}" class="btn btn-info">
+                        <i class="fas fa-chart-line"></i> Analytics
+                    </a>
+                    <a href="{{ url_for('portfolio.portfolio_optimize', portfolio_id=portfolio.portfolio_id) }}" class="btn btn-success">
+                        <i class="fas fa-cogs"></i> Optimize
+                    </a>
+                    <a href="{{ url_for('portfolio.edit_portfolio', portfolio_id=portfolio.portfolio_id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="metric">
+                        <div class="metric-icon bg-primary">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Value</div>
+                            <div class="metric-value">${{ "%.2f"|format(portfolio.total_value) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="metric">
+                        <div class="metric-icon {% if portfolio.total_return >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Return</div>
+                            <div class="metric-value {% if portfolio.total_return >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if portfolio.total_return >= 0 %}+{% endif %}{{ "%.2f"|format(portfolio.total_return_pct) }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="metric">
+                        <div class="metric-icon bg-info">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Holdings Value</div>
+                            <div class="metric-value">${{ "%.2f"|format(portfolio.holdings_value) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="metric">
+                        <div class="metric-icon bg-warning">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-label">Available Cash</div>
+                            <div class="metric-value">${{ "%.2f"|format(portfolio.cash) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Holdings Table -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-list"></i> Holdings</h5>
+                    <span class="badge bg-secondary">{{ portfolio.holdings|length }} stocks</span>
+                </div>
+                <div class="card-body">
+                    {% if portfolio.holdings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Shares</th>
+                                        <th>Avg Cost</th>
+                                        <th>Current Price</th>
+                                        <th>Market Value</th>
+                                        <th>Gain/Loss</th>
+                                        <th>Weight</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for holding in portfolio.holdings %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ holding.ticker }}</strong>
+                                            <br><small class="text-muted">{{ holding.company_name or holding.ticker }}</small>
+                                        </td>
+                                        <td>{{ holding.shares }}</td>
+                                        <td>${{ "%.2f"|format(holding.avg_cost) }}</td>
+                                        <td>
+                                            <span class="current-price" data-ticker="{{ holding.ticker }}">
+                                                ${{ "%.2f"|format(holding.current_price) }}
+                                            </span>
+                                        </td>
+                                        <td>${{ "%.2f"|format(holding.market_value) }}</td>
+                                        <td>
+                                            <span class="{% if holding.gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {% if holding.gain_loss >= 0 %}+{% endif %}${{ "%.2f"|format(holding.gain_loss) }}
+                                                <br><small>({{ "%.1f"|format(holding.gain_loss_pct) }}%)</small>
+                                            </span>
+                                        </td>
+                                        <td>{{ "%.1f"|format(holding.weight) }}%</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary btn-sm" onclick="editHolding('{{ holding.ticker }}')">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm" onclick="removeHolding('{{ holding.ticker }}')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-holdings">
+                            <div class="text-center py-5">
+                                <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                                <h5>No Holdings Yet</h5>
+                                <p class="text-muted">Add your first stock to start building your portfolio</p>
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStockModal">
+                                    <i class="fas fa-plus"></i> Add Stock
+                                </button>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio Analytics -->
+        <div class="col-lg-4">
+            <!-- Allocation Chart -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-pie"></i> Asset Allocation</h6>
+                </div>
+                <div class="card-body">
+                    {% if portfolio.holdings %}
+                        <canvas id="allocationChart" width="300" height="300"></canvas>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-pie fa-2x text-muted"></i>
+                            <p class="text-muted mt-2">Add holdings to see allocation</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Portfolio Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-bar"></i> Portfolio Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="stat-item">
+                        <div class="stat-label">Number of Holdings</div>
+                        <div class="stat-value">{{ portfolio.holdings|length }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Largest Position</div>
+                        <div class="stat-value">
+                            {% if portfolio.holdings %}
+                                {{ "%.1f"|format(portfolio.holdings|max(attribute='weight')|attr('weight')) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Cash Allocation</div>
+                        <div class="stat-value">{{ "%.1f"|format((portfolio.cash / portfolio.total_value * 100) if portfolio.total_value > 0 else 0) }}%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Created</div>
+                        <div class="stat-value">{{ portfolio.created_at[:10] }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Stock Modal -->
+<div class="modal fade" id="addStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus"></i> Add Stock to Portfolio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('portfolio.add_stock', portfolio_id=portfolio.portfolio_id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="ticker" class="form-label">Stock Symbol *</label>
+                        <input type="text" class="form-control" id="ticker" name="ticker" required 
+                               placeholder="e.g., AAPL, MSFT, GOOGL" style="text-transform: uppercase;">
+                    </div>
+                    <div class="mb-3">
+                        <label for="shares" class="form-label">Number of Shares *</label>
+                        <input type="number" class="form-control" id="shares" name="shares" 
+                               step="0.001" min="0.001" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="purchase_price" class="form-label">Purchase Price per Share *</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="purchase_price" name="purchase_price" 
+                                   step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Total Cost:</strong> $<span id="totalCost">0.00</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.metric-card {
+    border: 1px solid #e0e0e0;
+    transition: transform 0.2s ease-in-out;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+
+.metric {
+    display: flex;
+    align-items: center;
+}
+
+.metric-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.empty-holdings {
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+</style>
+
+<script>
+// Calculate total cost in add stock modal
+document.addEventListener('DOMContentLoaded', function() {
+    const sharesInput = document.getElementById('shares');
+    const priceInput = document.getElementById('purchase_price');
+    const totalCostSpan = document.getElementById('totalCost');
+    
+    function updateTotalCost() {
+        const shares = parseFloat(sharesInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        const total = shares * price;
+        totalCostSpan.textContent = total.toFixed(2);
+    }
+    
+    sharesInput.addEventListener('input', updateTotalCost);
+    priceInput.addEventListener('input', updateTotalCost);
+    
+    // Auto-uppercase ticker input
+    document.getElementById('ticker').addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase();
+    });
+});
+
+// Portfolio allocation chart
+{% if portfolio.holdings %}
+const ctx = document.getElementById('allocationChart').getContext('2d');
+const allocationData = {
+    labels: [
+        {% for holding in portfolio.holdings %}
+        '{{ holding.ticker }}',
+        {% endfor %}
+        {% if portfolio.cash > 0 %}
+        'Cash'
+        {% endif %}
+    ],
+    datasets: [{
+        data: [
+            {% for holding in portfolio.holdings %}
+            {{ holding.weight }},
+            {% endfor %}
+            {% if portfolio.cash > 0 %}
+            {{ "%.1f"|format((portfolio.cash / portfolio.total_value * 100) if portfolio.total_value > 0 else 0) }}
+            {% endif %}
+        ],
+        backgroundColor: [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+            '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+        ]
+    }]
+};
+
+new Chart(ctx, {
+    type: 'doughnut',
+    data: allocationData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+function editHolding(ticker) {
+    // Implementation for editing holdings
+    alert('Edit holding functionality coming soon!');
+}
+
+function removeHolding(ticker) {
+    if (confirm(`Are you sure you want to remove ${ticker} from your portfolio?`)) {
+        // Create and submit form to remove holding
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{{ url_for('portfolio.remove_stock_from_portfolio', portfolio_id=portfolio.portfolio_id) }}`;
+        
+        const tickerInput = document.createElement('input');
+        tickerInput.type = 'hidden';
+        tickerInput.name = 'ticker';
+        tickerInput.value = ticker;
+        
+        form.appendChild(tickerInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}

@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Analysis{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-chart-bar"></i> Stock Analysis Deep-Dive</h2>
+                    <p class="text-muted">Comprehensive Eight Pillars analysis, DCF valuation, and financial insights</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                    <a href="{{ url_for('analysis.screener') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-filter"></i> Back to Screener
+                    </a>
+                    {% if ticker %}
+                    <a href="{{ url_for('analysis.compare') }}?tickers={{ ticker }}" class="btn btn-outline-info">
+                        <i class="fas fa-balance-scale"></i> Compare
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if ticker %}
+    <!-- Analysis Progress Indicator -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Analysis Progress:</span>
+                        <div class="analysis-steps">
+                            <span class="step completed"><i class="fas fa-check"></i> Data Retrieved</span>
+                            <span class="step completed"><i class="fas fa-check"></i> Pillars Analyzed</span>
+                            <span class="step completed"><i class="fas fa-check"></i> Valuation Complete</span>
+                            <span class="step completed"><i class="fas fa-check"></i> Ready for Review</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Summary Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-star"></i> Investment Summary - {{ ticker.upper() }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            {% if company_info is defined and company_info is not none %}
+                            <h6 class="text-primary">{{ company_info.get('comp_name_2', ticker.upper()) }}</h6>
+                            <p class="mb-1"><strong>Sector:</strong> {{ company_info.get('zacks_x_sector_desc', 'N/A') }}</p>
+                            <p class="mb-0"><strong>Price:</strong> ${{ "%.2f"|format(company_info.get('last_close', 0)) }}</p>
+                            {% else %}
+                            <h6 class="text-primary">{{ ticker.upper() }}</h6>
+                            <p class="text-muted">Loading company data...</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            {% if eight_pillars_score is defined %}
+                            <div class="text-center">
+                                <h6>Quality Score</h6>
+                                <div class="score-circle {% if eight_pillars_score >= 6 %}score-excellent{% elif eight_pillars_score >= 4 %}score-good{% else %}score-poor{% endif %}">
+                                    {{ eight_pillars_score }}/8
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            {% if valuation_recommendation %}
+                            <div class="text-center">
+                                <h6>Valuation</h6>
+                                <span class="badge badge-lg {{ valuation_recommendation.class.replace('alert-', 'badge-') }}">
+                                    {{ valuation_recommendation.title }}
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6>Quick Actions</h6>
+                                <div class="btn-group-vertical btn-group-sm">
+                                    <button class="btn btn-outline-success btn-sm" onclick="addToPortfolio('{{ ticker }}')">
+                                        <i class="fas fa-plus"></i> Add to Portfolio
+                                    </button>
+                                    <button class="btn btn-outline-info btn-sm" onclick="addToComparison('{{ ticker }}')">
+                                        <i class="fas fa-balance-scale"></i> Add to Compare
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Stock Input Form -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-search"></i> Enter Stock Symbol</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('analysis.analyze') }}">
+                        <div class="form-group mb-3">
+                            <label for="ticker" class="form-label">Stock Ticker Symbol</label>
+                            <input type="text" class="form-control" id="ticker" name="ticker" 
+                                   placeholder="e.g., AAPL, MSFT, GOOGL" value="{{ ticker or '' }}" required>
+                            <small class="form-text text-muted">Enter a valid stock ticker symbol</small>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="discount_rate" class="form-label">Discount Rate (%)</label>
+                            <input type="number" class="form-control" id="discount_rate" name="discount_rate" 
+                                   step="0.01" min="0" max="1" value="{{ discount_rate or 0.125 }}">
+                            <small class="form-text text-muted">Used for intrinsic value calculation (default: 12.5%)</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-chart-line"></i> Analyze Stock
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        {% if ticker %}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Company Information</h5>
+                </div>
+                <div class="card-body">
+                    {% if company_info is defined and company_info is not none %}
+                        <h6><strong>{{ ticker.upper() }}</strong></h6>
+                        <p class="mb-1"><strong>Company:</strong> {{ company_info.get('comp_name_2', 'N/A') }}</p>
+                        <p class="mb-1"><strong>Sector:</strong> {{ company_info.get('zacks_x_sector_desc', 'N/A') }}</p>
+                        <p class="mb-1"><strong>Industry:</strong> {{ company_info.get('zacks_x_ind_desc', 'N/A') }}</p>
+                        <p class="mb-1"><strong>Last Close:</strong> ${{ "%.2f"|format(company_info.get('last_close', 0)) }}</p>
+                        <p class="mb-0"><strong>Forward P/E:</strong> {{ "%.2f"|format(company_info.get('forward_pe_ratio', 0)) }}</p>
+                    {% else %}
+                        <p class="text-muted">Company information not available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if ticker %}
+    <!-- Main Analysis Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="analysisTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                                <i class="fas fa-eye"></i> Overview
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="pillars-tab" data-bs-toggle="tab" data-bs-target="#pillars" type="button" role="tab">
+                                <i class="fas fa-columns"></i> Eight Pillars
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="valuation-tab" data-bs-toggle="tab" data-bs-target="#valuation" type="button" role="tab">
+                                <i class="fas fa-calculator"></i> Valuation
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="financials-tab" data-bs-toggle="tab" data-bs-target="#financials" type="button" role="tab">
+                                <i class="fas fa-file-alt"></i> Financials
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="ratios-tab" data-bs-toggle="tab" data-bs-target="#ratios" type="button" role="tab">
+                                <i class="fas fa-percentage"></i> Ratios
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="analysisTabContent">
+                        <!-- Overview Tab -->
+                        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    {% if chart_html %}
+                                    <div class="card mb-3">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="fas fa-chart-line"></i> Price History</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            {{ chart_html|safe }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    {% if company_info is defined and company_info is not none %}
+                                    <div class="card mb-3">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="fas fa-building"></i> Company Details</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <table class="table table-sm">
+                                                <tr><td><strong>Industry:</strong></td><td>{{ company_info.get('zacks_x_ind_desc', 'N/A') }}</td></tr>
+                                                <tr><td><strong>Forward P/E:</strong></td><td>{{ "%.2f"|format(company_info.get('forward_pe_ratio', 0)) }}</td></tr>
+                                                <tr><td><strong>Market Cap:</strong></td><td>${{ "%.1fB"|format((company_info.get('last_close', 0) * company_info.get('shares_outstanding', 0))/1000000000) if company_info.get('shares_outstanding') else 'N/A' }}</td></tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Quick Metrics -->
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="fas fa-tachometer-alt"></i> Key Metrics</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row text-center">
+                                                {% if eight_pillars_score is defined %}
+                                                <div class="col-6 mb-2">
+                                                    <div class="metric-box">
+                                                        <div class="metric-value">{{ eight_pillars_score }}/8</div>
+                                                        <div class="metric-label">Quality</div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                                {% if valuation_recommendation %}
+                                                <div class="col-6 mb-2">
+                                                    <div class="metric-box">
+                                                        <div class="metric-value text-{{ valuation_recommendation.class.replace('alert-', '') }}">
+                                                            {% if 'undervalued' in valuation_recommendation.title.lower() %}↑
+                                                            {% elif 'overvalued' in valuation_recommendation.title.lower() %}↓
+                                                            {% else %}→{% endif %}
+                                                        </div>
+                                                        <div class="metric-label">Value</div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Eight Pillars Tab -->
+                        <div class="tab-pane fade" id="pillars" role="tabpanel">
+                            {% if eight_pillars_html %}
+                            <div class="mb-3">
+                                <h5><i class="fas fa-columns"></i> Eight Pillars Quality Analysis</h5>
+                                <p class="text-muted">
+                                    The Eight Pillars analysis evaluates stock quality based on key financial criteria. 
+                                    A checkmark (✔️) indicates the stock meets the criterion, while an X (❌) indicates it doesn't.
+                                </p>
+                            </div>
+                            {{ eight_pillars_html|safe }}
+                            
+                            {% if eight_pillars_score %}
+                            <div class="mt-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Overall Quality Score: 
+                                            <span class="badge badge-lg {% if eight_pillars_score >= 6 %}badge-success{% elif eight_pillars_score >= 4 %}badge-warning{% else %}badge-danger{% endif %}">
+                                                {{ eight_pillars_score }}/8
+                                            </span>
+                                        </h6>
+                                        <div class="progress mt-2" style="height: 25px;">
+                                            <div class="progress-bar {% if eight_pillars_score >= 6 %}bg-success{% elif eight_pillars_score >= 4 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" style="width: {{ (eight_pillars_score/8)*100 }}%">
+                                                {{ "%.1f"|format((eight_pillars_score/8)*100) }}%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">
+                                            {% if eight_pillars_score >= 6 %}Excellent quality stock with strong fundamentals
+                                            {% elif eight_pillars_score >= 4 %}Good quality stock with some areas for improvement
+                                            {% else %}Lower quality stock - proceed with caution{% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-columns fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Eight Pillars analysis not available for this stock.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Valuation Tab -->
+                        <div class="tab-pane fade" id="valuation" role="tabpanel">
+                            {% if intrinsic_value_html %}
+                            <div class="mb-3">
+                                <h5><i class="fas fa-calculator"></i> Intrinsic Value Analysis</h5>
+                                <p class="text-muted">
+                                    Intrinsic value calculation based on discounted cash flow (DCF) model using EPS estimates and growth projections.
+                                </p>
+                            </div>
+                            {{ intrinsic_value_html|safe }}
+                            
+                            {% if valuation_recommendation %}
+                            <div class="mt-4">
+                                <div class="alert {{ valuation_recommendation.class }} alert-dismissible fade show" role="alert">
+                                    <h6 class="alert-heading">{{ valuation_recommendation.title }}</h6>
+                                    {{ valuation_recommendation.message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-calculator fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Intrinsic value analysis not available for this stock.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Financials Tab -->
+                        <div class="tab-pane fade" id="financials" role="tabpanel">
+                            {% if financial_statements %}
+                            <div class="mb-3">
+                                <h5><i class="fas fa-file-alt"></i> Financial Statements</h5>
+                                <p class="text-muted">Historical financial data across income statement, balance sheet, and cash flow.</p>
+                            </div>
+                            <ul class="nav nav-pills mb-3" id="financialTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="income-tab" data-bs-toggle="tab" data-bs-target="#income" type="button" role="tab">
+                                        <i class="fas fa-chart-bar"></i> Income Statement
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="balance-tab" data-bs-toggle="tab" data-bs-target="#balance" type="button" role="tab">
+                                        <i class="fas fa-balance-scale"></i> Balance Sheet
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="cashflow-tab" data-bs-toggle="tab" data-bs-target="#cashflow" type="button" role="tab">
+                                        <i class="fas fa-money-bill-wave"></i> Cash Flow
+                                    </button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="financialTabsContent">
+                                <div class="tab-pane fade show active" id="income" role="tabpanel">
+                                    {% if financial_statements.income %}
+                                        {{ financial_statements.income|safe }}
+                                    {% else %}
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-chart-bar fa-2x text-muted mb-2"></i>
+                                            <p class="text-muted">Income statement data not available.</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="tab-pane fade" id="balance" role="tabpanel">
+                                    {% if financial_statements.balance %}
+                                        {{ financial_statements.balance|safe }}
+                                    {% else %}
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-balance-scale fa-2x text-muted mb-2"></i>
+                                            <p class="text-muted">Balance sheet data not available.</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="tab-pane fade" id="cashflow" role="tabpanel">
+                                    {% if financial_statements.cashflow %}
+                                        {{ financial_statements.cashflow|safe }}
+                                    {% else %}
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-money-bill-wave fa-2x text-muted mb-2"></i>
+                                            <p class="text-muted">Cash flow statement data not available.</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Financial statements not available for this stock.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Ratios Tab -->
+                        <div class="tab-pane fade" id="ratios" role="tabpanel">
+                            {% if financial_ratios %}
+                            <div class="mb-3">
+                                <h5><i class="fas fa-percentage"></i> Key Financial Ratios</h5>
+                                <p class="text-muted">Important financial metrics comparing latest values with 3-year averages.</p>
+                            </div>
+                            <div class="row">
+                                {% for ratio_name, ratio_data in financial_ratios.items() %}
+                                <div class="col-md-4 col-lg-3 mb-3">
+                                    <div class="card h-100 border-left-primary">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-title text-primary">{{ ratio_name.replace('_', ' ').title() }}</h6>
+                                            {% if ratio_data is defined and ratio_data is not none %}
+                                                <div class="ratio-values">
+                                                    <div class="latest-value">
+                                                        <span class="value-label">Latest</span>
+                                                        <span class="value-number">{{ "%.2f"|format(ratio_data.iloc[-1]) if ratio_data.iloc[-1] == ratio_data.iloc[-1] else 'N/A' }}</span>
+                                                    </div>
+                                                    <div class="avg-value">
+                                                        <span class="value-label">3-Year Avg</span>
+                                                        <span class="value-number text-muted">{{ "%.2f"|format(ratio_data.mean()) if ratio_data.mean() == ratio_data.mean() else 'N/A' }}</span>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <p class="text-muted">Data not available</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-percentage fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Financial ratios not available for this stock.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.border-left-primary {
+    border-left: 4px solid #007bff !important;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.progress {
+    height: 20px;
+}
+
+.badge-success {
+    background-color: #28a745;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+}
+</style>
+{% endblock %}
