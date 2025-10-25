@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: financial-analysis-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    plan: free
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CACHE_TIMEOUT
+        value: 900
+      - key: LOG_LEVEL
+        value: WARNING
+    healthCheckPath: /
