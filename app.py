@@ -70,6 +70,3 @@ if __name__ == '__main__':
     debug = os.environ.get('FLASK_ENV', 'development') == 'development'
     
     app.run(host=host, port=port, debug=debug)
-
-# Create app instance for gunicorn
-app = create_app()
