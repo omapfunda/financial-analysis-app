@@ -61,7 +61,6 @@ def create_app():
     return app
 
 if __name__ == '__main__':
-    app = create_app()
     print("Starting Flask application...")
     
     # Use environment variables for host and port (for deployment)
@@ -70,3 +69,5 @@ if __name__ == '__main__':
     debug = os.environ.get('FLASK_ENV', 'development') == 'development'
     
     app.run(host=host, port=port, debug=debug)
+
+app = create_app()
