@@ -3,7 +3,7 @@ services:
     name: financial-analysis-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --timeout 120 --workers 2 --worker-class sync app:app
     plan: free
     envVars:
       - key: FLASK_ENV

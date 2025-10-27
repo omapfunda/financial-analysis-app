@@ -171,19 +171,34 @@ def run_async_screener(tickers: List[str], batch_size: int = 10, timeout: float 
     Synchronous wrapper for async stock processing
     """
     try:
-        # Try to get the current event loop
+        # Check if we're in an async context
         try:
             loop = asyncio.get_running_loop()
-            # If we're already in an async context, create a new thread
+            # We're in an async context, run in a thread pool
             import concurrent.futures
+            import threading
+            
+            def run_in_new_loop():
+                # Create a new event loop for this thread
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    return new_loop.run_until_complete(process_stocks_batch(tickers, batch_size, timeout))
+                finally:
+                    new_loop.close()
+            
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    lambda: asyncio.run(process_stocks_batch(tickers, batch_size, timeout))
-                )
-                return future.result()
+                future = executor.submit(run_in_new_loop)
+                return future.result(timeout=timeout + 10)  # Add buffer time
+                
         except RuntimeError:
-            # No event loop is running, we can use asyncio.run directly
-            return asyncio.run(process_stocks_batch(tickers, batch_size, timeout))
+            # No event loop is running, safe to use asyncio.run
+            try:
+                return asyncio.run(process_stocks_batch(tickers, batch_size, timeout))
+            except Exception as async_error:
+                logger.warning(f"Async processing failed: {async_error}, falling back to sync")
+                return _fallback_sync_processing(tickers)
+                
     except Exception as e:
         logger.error(f"Error in async screener: {e}")
         # Fallback to synchronous processing
