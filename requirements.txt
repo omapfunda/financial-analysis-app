@@ -26,6 +26,7 @@ openpyxl>=3.1.0
 
 # Production Server
 gunicorn>=21.0.0
+uvicorn>=0.23.2
 
 # Environment Variables
 python-dotenv>=1.0.0
